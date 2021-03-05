@@ -1,11 +1,39 @@
-use sqlx::prelude::*;
 use chrono::prelude::*;
+use serde::Deserialize;
+use sqlx::prelude::*;
+
+/// Represents bookmark visibility.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BookmarkVisibility {
+    All,
+    Public,
+    Private,
+}
+
+/// Query options given from `GET /bookmarks/show`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BookmarkUniqueQuery {
+    ByHash {
+        hash: String,
+        private_key: Option<String>,
+    },
+
+    ByUrl {
+        url: String,
+    },
+
+    ById {
+        id: u64,
+        visibility: BookmarkVisibility,
+    },
+}
 
 /// The entity form of a bookmark.
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct Bookmark {
     pub id: u64,
-    pub short_url: String,
+    pub hash: String,
     pub url: String,
     pub title: String,
     pub description: String,
