@@ -1,16 +1,14 @@
 CREATE TABLE IF NOT EXISTS bookmarks (
   id BIGINT NOT NULL PRIMARY KEY,
-  short_url VARCHAR(256) NOT NULL UNIQUE,
+  hash VARCHAR(128) NOT NULL UNIQUE,
   url TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  thumbnail TEXT NULL,
+  thumbnail VARCHAR(512) NULL,
   sticky BOOLEAN NOT NULL,
   private BOOLEAN NOT NULL,
-  -- created DATETIME NOT NULL,
-  -- updated DATETIME NOT NULL,
-  created TIMESTAMP WITH TIMEZONE NOT NULL,
-  updated TIMESTAMP WITH TIMEZONE NOT NULL
+  created TIMESTAMPTZ NOT NULL,
+  updated TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -18,8 +16,8 @@ CREATE TABLE IF NOT EXISTS tags (
   tag VARCHAR(256) NOT NULL UNIQUE
 );
 
-CREATE TABLE IF NOT EXIST bookmarks_tags (
-  bookmark_id BIGINT NOT NULL,
-  tag_id BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS bookmarks_tags (
+  bookmark_id BIGINT NOT NULL REFERENCES bookmarks(id),
+  tag_id BIGINT NOT NULL REFERENCES tags(id),
   PRIMARY KEY (bookmark_id, tag_id)
 );

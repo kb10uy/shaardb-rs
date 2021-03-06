@@ -32,7 +32,7 @@ features = ["serde"]
 
 [dependencies.sqlx]
 version = "0.5.1"
-features = ["runtime-async-std-native-tls", "sqlite", "postgres"]
+features = ["runtime-async-std-native-tls", "sqlite", "postgres", "chrono"]
 
 [dependencies.envy]
 version = "0.4.1"

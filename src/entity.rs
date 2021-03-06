@@ -1,15 +1,7 @@
-use chrono::prelude::*;
-use serde::Deserialize;
-use sqlx::prelude::*;
+use crate::schema::BookmarkVisibility;
 
-/// Represents bookmark visibility.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BookmarkVisibility {
-    All,
-    Public,
-    Private,
-}
+use chrono::prelude::*;
+use sqlx::prelude::*;
 
 /// Query options given from `GET /bookmarks/show`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,15 +16,27 @@ pub enum BookmarkUniqueQuery {
     },
 
     ById {
-        id: u64,
+        id: i64,
         visibility: BookmarkVisibility,
     },
+}
+
+/// The entity form of a new bookmark.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct UnregisteredBookmark {
+    pub hash: String,
+    pub url: String,
+    pub title: String,
+    pub description: String,
+    pub thumbnail: Option<String>,
+    pub sticky: bool,
+    pub private: bool,
 }
 
 /// The entity form of a bookmark.
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct Bookmark {
-    pub id: u64,
+    pub id: i64,
     pub hash: String,
     pub url: String,
     pub title: String,
@@ -47,13 +51,13 @@ pub struct Bookmark {
 /// The entity form of a tag.
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct Tag {
-    pub id: u64,
+    pub id: i64,
     pub tag: String,
 }
 
 /// The relation entry between a bookmark and a tag.
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct BookmarkTagRelation {
-    pub bookmark_id: u64,
-    pub tag_id: u64,
+    pub bookmark_id: i64,
+    pub tag_id: i64,
 }

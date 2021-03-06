@@ -1,10 +1,19 @@
-use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
+use serde::{Deserialize, Serialize};
+
+/// Represents bookmark visibility.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BookmarkVisibility {
+    All,
+    Public,
+    Private,
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Bookmark {
-    pub id: Option<u64>,
-    pub short_url: String,
+    pub id: Option<i64>,
+    pub hash: String,
     pub url: String,
     pub title: String,
     pub description: String,
@@ -21,7 +30,7 @@ pub struct Bookmark {
 pub struct BookmarksShowQuery {
     pub hash: Option<String>,
     pub url: Option<String>,
-    pub id: Option<u64>,
-    pub visibility: Option<u64>,
-    pub private_key: Option<u64>,
+    pub id: Option<i64>,
+    pub visibility: Option<BookmarkVisibility>,
+    pub private_key: Option<String>,
 }
