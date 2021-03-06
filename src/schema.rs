@@ -21,8 +21,8 @@ pub struct Bookmark {
     pub tags: Vec<String>,
     pub sticky: bool,
     pub private: bool,
-    pub created: DateTime<Local>,
-    pub updated: DateTime<Local>,
+    pub created: Option<DateTime<Local>>,
+    pub updated: Option<DateTime<Local>>,
 }
 
 /// Request query parameter of `GET /bookmarks/show`

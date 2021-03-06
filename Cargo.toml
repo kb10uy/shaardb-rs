@@ -9,9 +9,15 @@ edition = "2018"
 [dependencies.anyhow]
 version = "1.0.38"
 
+[dependencies.log]
+version= "0.4.14"
+
 [dependencies.async-std]
 version = "1.9.0"
 features = ["attributes"]
+
+[dependencies.async-trait]
+version = "0.1.45"
 
 [dependencies.futures]
 version = "0.3.13"
@@ -36,3 +42,6 @@ features = ["runtime-async-std-native-tls", "sqlite", "postgres", "chrono"]
 
 [dependencies.envy]
 version = "0.4.1"
+
+[dependencies.pretty_env_logger]
+version = "0.4.0"
