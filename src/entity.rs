@@ -1,25 +1,17 @@
 use crate::schema::BookmarkVisibility;
 
 use chrono::prelude::*;
-use sqlx::prelude::*;
 use serde_json::Value as JsonValue;
+use sqlx::prelude::*;
 
 /// Query options given from `GET /bookmarks/show`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BookmarkUniqueQuery {
-    ByHash {
-        hash: String,
-        private_key: Option<String>,
-    },
+    ByHash { hash: String, private_key: Option<String> },
 
-    ByUrl {
-        url: String,
-    },
+    ByUrl { url: String },
 
-    ById {
-        id: i64,
-        visibility: BookmarkVisibility,
-    },
+    ById { id: i64, visibility: BookmarkVisibility },
 }
 
 /// The entity form of a new bookmark.

@@ -3,11 +3,14 @@
 use crate::{
     application::State,
     database::{
-        add_sync_tags, count_bookmarks_by_visibility, delete_bookmark, fetch_bookmark, fetch_tags_of_bookmarks, insert_bookmark, relate_bookmark_tags,
-        update_bookmark,
+        add_sync_tags, count_bookmarks_by_tags, count_bookmarks_by_visibility, delete_bookmark, fetch_bookmark, fetch_tags_of_bookmarks,
+        insert_bookmark, relate_bookmark_tags, update_bookmark,
     },
     entity::{Bookmark as EntityBookmark, BookmarkUniqueQuery, UnregisteredBookmark as EntityUnregisteredBookmark},
-    schema::{Bookmark, BookmarkVisibility, BookmarksCountQuery, BookmarksCountResponse, BookmarksRemoveQuery, BookmarksShowQuery},
+    schema::{
+        Bookmark, BookmarkVisibility, BookmarksCountQuery, BookmarksCountResponse, BookmarksCountsByTagQuery,
+        BookmarksCountsByTagQueryResponse, BookmarksRemoveQuery, BookmarksShowQuery,
+    },
 };
 
 use serde_json::{json, to_value as to_json_value};
@@ -30,7 +33,9 @@ pub async fn bookmarks_show(request: Request<State>) -> TideResult {
     } else if let Some(url) = query.url {
         BookmarkUniqueQuery::ByUrl { url }
     } else {
-        return Ok(Response::builder(StatusCode::BadRequest).body("Query must have one of id/hash/url").build());
+        return Ok(Response::builder(StatusCode::BadRequest)
+            .body("Query must have one of id/hash/url")
+            .build());
     };
 
     let bookmark_entity = match fetch_bookmark(&state.pool, entity_query).await? {
@@ -48,7 +53,9 @@ pub async fn bookmarks_add(mut request: Request<State>) -> TideResult {
     let body: Bookmark = request.body_json().await?;
     let state = request.state();
     if let Some(_) = body.id {
-        return Ok(Response::builder(StatusCode::NotFound).body("New bookmark must not have an ID").build());
+        return Ok(Response::builder(StatusCode::NotFound)
+            .body("New bookmark must not have an ID")
+            .build());
     }
 
     let bookmark_entity = EntityUnregisteredBookmark {
@@ -79,7 +86,11 @@ pub async fn bookmarks_update(mut request: Request<State>) -> TideResult {
     let state = request.state();
     let id = match body.id {
         Some(i) => i,
-        None => return Ok(Response::builder(StatusCode::BadRequest).body("New bookmark must not have an ID").build()),
+        None => {
+            return Ok(Response::builder(StatusCode::BadRequest)
+                .body("New bookmark must not have an ID")
+                .build())
+        }
     };
 
     let bookmark_entity = EntityUnregisteredBookmark {
@@ -123,6 +134,21 @@ pub async fn bookmarks_count(request: Request<State>) -> TideResult {
     Ok(Response::builder(StatusCode::Ok)
         .body(to_json_value(BookmarksCountResponse { visibility, count })?)
         .build())
+}
+
+/// Endpoint of `GET /bookmarks/counts_by_tag`.
+pub async fn bookmarks_counts_by_tag(request: Request<State>) -> TideResult {
+    let state = request.state();
+    let query: BookmarksCountsByTagQuery = request.query()?;
+
+    let visibility = query.visibility.unwrap_or(BookmarkVisibility::All);
+    let pairs = count_bookmarks_by_tags(&state.pool, &query.filter, visibility).await?;
+
+    let result: Vec<_> = pairs
+        .into_iter()
+        .map(|(tag, count)| BookmarksCountsByTagQueryResponse { tag, count })
+        .collect();
+    Ok(Response::builder(StatusCode::Ok).body(to_json_value(result)?).build())
 }
 
 fn bookmark_from_entity(entity: EntityBookmark, tags: impl IntoIterator<Item = String>) -> Bookmark {

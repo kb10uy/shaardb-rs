@@ -15,12 +15,17 @@ async fn main() -> Result<()> {
 
     let mut app = tide::with_state(state);
     app.with(ServerErrorLogMiddleware);
+
+    // Routes -----------------------------------------------------------------
     app.at("/bookmarks/show").get(endpoint::bookmarks_show);
+    app.at("/bookmarks/count").get(endpoint::bookmarks_count);
+    app.at("/bookmarks/counts_by_tag").get(endpoint::bookmarks_counts_by_tag);
+    app.at("/bookmarks/search");
+
     app.at("/bookmarks/add").post(endpoint::bookmarks_add);
     app.at("/bookmarks/update").put(endpoint::bookmarks_update);
     app.at("/bookmarks/remove").delete(endpoint::bookmarks_remove);
-    app.at("/bookmarks/find");
-    app.at("/bookmarks/count").get(endpoint::bookmarks_count);
+    // Routes -----------------------------------------------------------------
 
     app.listen(&env.listen_at).await?;
 

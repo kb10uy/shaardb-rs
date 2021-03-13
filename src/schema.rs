@@ -6,8 +6,13 @@ use serde_json::Value as JsonValue;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BookmarkVisibility {
+    /// All bookmarks queried
     All,
+
+    /// Public bookmarks queried
     Public,
+
+    /// Private bookmarks queried
     Private,
 }
 
@@ -19,7 +24,10 @@ pub struct Bookmark {
     pub title: String,
     pub description: String,
     pub thumbnail: Option<String>,
+
+    #[serde(default)]
     pub tags: Vec<String>,
+
     pub sticky: bool,
     pub private: bool,
     pub extra_data: Option<JsonValue>,
@@ -53,5 +61,20 @@ pub struct BookmarksCountQuery {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct BookmarksCountResponse {
     pub visibility: BookmarkVisibility,
+    pub count: i64,
+}
+
+/// Request query parameter of `GET /bookmarks/counts_by_tag`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+pub struct BookmarksCountsByTagQuery {
+    pub visibility: Option<BookmarkVisibility>,
+
+    #[serde(default)]
+    pub filter: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct BookmarksCountsByTagQueryResponse {
+    pub tag: String,
     pub count: i64,
 }

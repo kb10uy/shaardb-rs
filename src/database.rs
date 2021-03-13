@@ -120,16 +120,54 @@ pub async fn count_bookmarks_by_visibility(pool: &PgPool, visibility: BookmarkVi
     Ok(count.0)
 }
 
+/// Counts bookmarks by its tags and groups with them.
+pub async fn count_bookmarks_by_tags(pool: &PgPool, tags: &[impl AsRef<str>], visibility: BookmarkVisibility) -> Result<Vec<(String, i64)>> {
+    let query_base = r#"
+        SELECT
+            tags.id,
+            tags.tag,
+            COUNT(*) AS count
+        FROM bookmarks_tags
+        JOIN bookmarks ON bookmarks_tags.bookmark_id = bookmarks.id
+        JOIN tags ON bookmarks_tags.tag_id = tags.id
+    "#;
+    let query_grouping = r#"
+        GROUP BY tags.id
+        ORDER BY count DESC;
+    "#;
+    let where_clause = match (tags, visibility) {
+        ([], BookmarkVisibility::All) => "",
+        (_, BookmarkVisibility::All) => "WHERE tags.tag = ANY($1)",
+        ([], _) => "WHERE bookmarks.is_private = $2",
+        _ => "WHERE tags.tag = ANY($1) AND bookmarks.is_private = $2",
+    };
+    let query_str = format!("{} {} {}", query_base, where_clause, query_grouping);
+
+    let tags: Vec<_> = tags.iter().map(|t| t.as_ref()).collect();
+    let groups: Vec<(i64, String, i64)> = query_as(&query_str)
+        .bind(tags)
+        .bind(visibility == BookmarkVisibility::Private)
+        .fetch_all(pool)
+        .await?;
+
+    let results = groups.into_iter().map(|(_, tag, count)| (tag, count)).collect();
+    Ok(results)
+}
+
 /// Adds new tags and returns all tag information.
-pub async fn add_sync_tags(pool: &PgPool, tags: &[String]) -> Result<Vec<Tag>> {
+pub async fn add_sync_tags(pool: &PgPool, tags: &[impl AsRef<str>]) -> Result<Vec<Tag>> {
     let query_str = format!(
         "INSERT INTO tags(tag) VALUES {} ON CONFLICT DO NOTHING;",
         (1..=tags.len()).map(|i| format!("(${})", i)).collect::<Vec<_>>().join(", ")
     );
-    let query = tags.iter().fold(query(&query_str), |q, t| q.bind(t));
+    let query = tags.iter().fold(query(&query_str), |q, t| q.bind(t.as_ref()));
     query.execute(pool).await?;
 
-    let synced_tags = query_as("SELECT * FROM tags WHERE tag = ANY($1);").bind(tags).fetch_all(pool).await?;
+    let tags: Vec<_> = tags.iter().map(|t| t.as_ref()).collect();
+    let synced_tags = query_as("SELECT * FROM tags WHERE tag = ANY($1);")
+        .bind(tags)
+        .fetch_all(pool)
+        .await?;
     Ok(synced_tags)
 }
 
@@ -142,7 +180,10 @@ pub async fn relate_bookmark_tags(pool: &PgPool, bookmark_id: i64, tag_ids: &[i6
 
     let query_str = format!(
         "INSERT INTO bookmarks_tags(bookmark_id, tag_id) VALUES {}",
-        (1..=tag_ids.len()).map(|i| format!("($1, ${})", i + 1)).collect::<Vec<_>>().join(", ")
+        (1..=tag_ids.len())
+            .map(|i| format!("($1, ${})", i + 1))
+            .collect::<Vec<_>>()
+            .join(", ")
     );
     let query = tag_ids.iter().fold(query(&query_str).bind(bookmark_id), |q, id| q.bind(id));
     query.execute(pool).await?;
