@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   thumbnail VARCHAR(512) NULL,
   sticky BOOLEAN NOT NULL,
   private BOOLEAN NOT NULL,
+  extra_data JSON NULL,
   created TIMESTAMPTZ NOT NULL,
   updated TIMESTAMPTZ NOT NULL
 );
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS tags (
 );
 
 CREATE TABLE IF NOT EXISTS bookmarks_tags (
-  bookmark_id BIGINT NOT NULL REFERENCES bookmarks(id),
-  tag_id BIGINT NOT NULL REFERENCES tags(id),
+  bookmark_id BIGINT NOT NULL REFERENCES bookmarks(id) ON DELETE CASCADE,
+  tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (bookmark_id, tag_id)
 );

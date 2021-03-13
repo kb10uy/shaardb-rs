@@ -20,6 +20,8 @@ async fn main() -> Result<()> {
     app.at("/bookmarks/update").put(endpoint::bookmarks_update);
     app.at("/bookmarks/remove")
         .delete(endpoint::bookmarks_remove);
+    app.at("/bookmarks/find");
+    app.at("/bookmarks/count");
 
     app.listen(&env.listen_at).await?;
 

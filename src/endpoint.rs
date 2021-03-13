@@ -4,16 +4,16 @@ use crate::{
     application::State,
     database::{
         add_sync_tags, fetch_bookmark, fetch_tags_of_bookmarks, insert_bookmark,
-        relate_bookmark_tags,
+        relate_bookmark_tags, update_bookmark, delete_bookmark
     },
     entity::{
         Bookmark as EntityBookmark, BookmarkUniqueQuery,
         UnregisteredBookmark as EntityUnregisteredBookmark,
     },
-    schema::{Bookmark, BookmarkVisibility, BookmarksShowQuery},
+    schema::{Bookmark, BookmarkVisibility, BookmarksShowQuery, BookmarksRemoveQuery},
 };
 
-use serde_json::to_value as to_json_value;
+use serde_json::{json, to_value as to_json_value};
 use tide::{http::StatusCode, Request, Response, Result as TideResult};
 
 /// Endpoint of `GET /bookmarks/show`.
@@ -72,6 +72,7 @@ pub async fn bookmarks_add(mut request: Request<State>) -> TideResult {
         thumbnail: body.thumbnail,
         sticky: body.sticky,
         private: body.private,
+        extra_data: body.extra_data,
     };
     let tags = body.tags;
 
@@ -88,13 +89,51 @@ pub async fn bookmarks_add(mut request: Request<State>) -> TideResult {
 }
 
 /// Endpoint of `PUT /bookmarks/update`.
-pub async fn bookmarks_update(request: Request<State>) -> TideResult {
-    todo!();
+pub async fn bookmarks_update(mut request: Request<State>) -> TideResult {
+    let body: Bookmark = request.body_json().await?;
+    let state = request.state();
+    let id = match body.id {
+        Some(i) => i,
+        None => {
+            return Ok(Response::builder(StatusCode::BadRequest)
+                .body("New bookmark must not have an ID")
+                .build())
+        }
+    };
+
+    let bookmark_entity = EntityUnregisteredBookmark {
+        hash: body.hash,
+        url: body.url,
+        title: body.title,
+        description: body.description,
+        thumbnail: body.thumbnail,
+        sticky: body.sticky,
+        private: body.private,
+        extra_data: body.extra_data,
+    };
+    let tags = body.tags;
+
+    let updated_bookmark = update_bookmark(&state.pool, id, bookmark_entity).await?;
+    let updated_tags = add_sync_tags(&state.pool, &tags).await?;
+    let tag_ids: Vec<_> = updated_tags.iter().map(|t| t.id).collect();
+    let tags: Vec<_> = updated_tags.into_iter().map(|t| t.tag).collect();
+    relate_bookmark_tags(&state.pool, updated_bookmark.id, &tag_ids).await?;
+
+    let bookmark = bookmark_from_entity(updated_bookmark, tags);
+    Ok(Response::builder(StatusCode::Ok)
+        .body(to_json_value(bookmark)?)
+        .build())
 }
 
 /// Endpoint of `DELETE /bookmarks/remove`.
 pub async fn bookmarks_remove(request: Request<State>) -> TideResult {
-    todo!();
+    let state = request.state();
+    let query: BookmarksRemoveQuery = request.query()?;
+
+    delete_bookmark(&state.pool, query.id).await?;
+    Ok(Response::builder(StatusCode::Ok)
+        .body(json!({}))
+        .build())
 }
 
 fn bookmark_from_entity(
@@ -111,6 +150,7 @@ fn bookmark_from_entity(
         tags: tags.into_iter().collect(),
         sticky: entity.sticky,
         private: entity.private,
+        extra_data: entity.extra_data,
         created: Some(entity.created),
         updated: Some(entity.updated),
     }

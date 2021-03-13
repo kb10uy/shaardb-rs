@@ -2,6 +2,7 @@ use crate::schema::BookmarkVisibility;
 
 use chrono::prelude::*;
 use sqlx::prelude::*;
+use serde_json::Value as JsonValue;
 
 /// Query options given from `GET /bookmarks/show`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +32,7 @@ pub struct UnregisteredBookmark {
     pub thumbnail: Option<String>,
     pub sticky: bool,
     pub private: bool,
+    pub extra_data: Option<JsonValue>,
 }
 
 /// The entity form of a bookmark.
@@ -44,6 +46,7 @@ pub struct Bookmark {
     pub thumbnail: Option<String>,
     pub sticky: bool,
     pub private: bool,
+    pub extra_data: Option<JsonValue>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
 }
