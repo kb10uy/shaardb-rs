@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 /// Represents bookmark visibility.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BookmarkVisibility {
     All,
@@ -27,7 +27,7 @@ pub struct Bookmark {
     pub updated: Option<DateTime<Local>>,
 }
 
-/// Request query parameter of `GET /bookmarks/show`
+/// Request query parameter of `GET /bookmarks/show`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 pub struct BookmarksShowQuery {
     pub hash: Option<String>,
@@ -37,8 +37,21 @@ pub struct BookmarksShowQuery {
     pub private_key: Option<String>,
 }
 
-/// Request query parameter of `DELETE /bookmarks/remove`
+/// Request query parameter of `DELETE /bookmarks/remove`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 pub struct BookmarksRemoveQuery {
     pub id: i64,
+}
+
+/// Request query parameter of `GET /bookmarks/count`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+pub struct BookmarksCountQuery {
+    pub visibility: Option<BookmarkVisibility>,
+}
+
+/// Response of `GET /bookmarks/count`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct BookmarksCountResponse {
+    pub visibility: BookmarkVisibility,
+    pub count: i64,
 }

@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     app.at("/bookmarks/remove")
         .delete(endpoint::bookmarks_remove);
     app.at("/bookmarks/find");
-    app.at("/bookmarks/count");
+    app.at("/bookmarks/count").get(endpoint::bookmarks_count);
 
     app.listen(&env.listen_at).await?;
 

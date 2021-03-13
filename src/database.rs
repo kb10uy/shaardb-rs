@@ -60,7 +60,7 @@ pub async fn insert_bookmark(pool: &PgPool, bookmark: UnregisteredBookmark) -> R
 }
 
 /// Updates a bookmark.
-/// It assumes that a bookmark with specified id already exists.
+/// It assumes that a bookmark with specified ID already exists.
 /// If not, nothing will happen.
 pub async fn update_bookmark(
     pool: &PgPool,
@@ -101,6 +101,7 @@ pub async fn update_bookmark(
     Ok(registered)
 }
 
+/// Deletes a bookmark by ID.
 pub async fn delete_bookmark(pool: &PgPool, id: i64) -> Result<()> {
     query("DELETE FROM bookmarks WHERE id = $1;")
         .bind(id)
@@ -108,6 +109,22 @@ pub async fn delete_bookmark(pool: &PgPool, id: i64) -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+/// Counts bookmarks by visibility.
+pub async fn count_bookmarks_by_visibility(
+    pool: &PgPool,
+    visibility: BookmarkVisibility,
+) -> Result<i64> {
+    let clause = if visibility == BookmarkVisibility::All {
+        "SELECT COUNT(*) FROM bookmarks;"
+    } else {
+        "SELECT COUNT(*) FROM bookmarks WHERE is_private = $1;"
+    };
+    let is_private = visibility == BookmarkVisibility::Private;
+
+    let count: (i64,) = query_as(clause).bind(is_private).fetch_one(pool).await?;
+    Ok(count.0)
 }
 
 /// Adds new tags and returns all tag information.

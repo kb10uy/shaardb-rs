@@ -3,14 +3,17 @@
 use crate::{
     application::State,
     database::{
-        add_sync_tags, fetch_bookmark, fetch_tags_of_bookmarks, insert_bookmark,
-        relate_bookmark_tags, update_bookmark, delete_bookmark
+        add_sync_tags, count_bookmarks_by_visibility, delete_bookmark, fetch_bookmark,
+        fetch_tags_of_bookmarks, insert_bookmark, relate_bookmark_tags, update_bookmark,
     },
     entity::{
         Bookmark as EntityBookmark, BookmarkUniqueQuery,
         UnregisteredBookmark as EntityUnregisteredBookmark,
     },
-    schema::{Bookmark, BookmarkVisibility, BookmarksShowQuery, BookmarksRemoveQuery},
+    schema::{
+        Bookmark, BookmarkVisibility, BookmarksCountQuery, BookmarksCountResponse,
+        BookmarksRemoveQuery, BookmarksShowQuery,
+    },
 };
 
 use serde_json::{json, to_value as to_json_value};
@@ -131,8 +134,18 @@ pub async fn bookmarks_remove(request: Request<State>) -> TideResult {
     let query: BookmarksRemoveQuery = request.query()?;
 
     delete_bookmark(&state.pool, query.id).await?;
+    Ok(Response::builder(StatusCode::Ok).body(json!({})).build())
+}
+
+/// Endpoint of `GET /bookmarks/count`.
+pub async fn bookmarks_count(request: Request<State>) -> TideResult {
+    let state = request.state();
+    let query: BookmarksCountQuery = request.query()?;
+
+    let visibility = query.visibility.unwrap_or(BookmarkVisibility::All);
+    let count = count_bookmarks_by_visibility(&state.pool, visibility).await?;
     Ok(Response::builder(StatusCode::Ok)
-        .body(json!({}))
+        .body(to_json_value(BookmarksCountResponse { visibility, count })?)
         .build())
 }
 
