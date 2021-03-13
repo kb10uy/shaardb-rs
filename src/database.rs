@@ -156,12 +156,14 @@ pub async fn count_bookmarks_by_tags(pool: &PgPool, tags: &[impl AsRef<str>], vi
 
 /// Adds new tags and returns all tag information.
 pub async fn add_sync_tags(pool: &PgPool, tags: &[impl AsRef<str>]) -> Result<Vec<Tag>> {
-    let query_str = format!(
-        "INSERT INTO tags(tag) VALUES {} ON CONFLICT DO NOTHING;",
-        (1..=tags.len()).map(|i| format!("(${})", i)).collect::<Vec<_>>().join(", ")
-    );
-    let query = tags.iter().fold(query(&query_str), |q, t| q.bind(t.as_ref()));
-    query.execute(pool).await?;
+    if !tags.is_empty() {
+        let query_str = format!(
+            "INSERT INTO tags(tag) VALUES {} ON CONFLICT DO NOTHING;",
+            (1..=tags.len()).map(|i| format!("(${})", i)).collect::<Vec<_>>().join(", ")
+        );
+        let query = tags.iter().fold(query(&query_str), |q, t| q.bind(t.as_ref()));
+        query.execute(pool).await?;
+    }
 
     let tags: Vec<_> = tags.iter().map(|t| t.as_ref()).collect();
     let synced_tags = query_as("SELECT * FROM tags WHERE tag = ANY($1);")
@@ -178,15 +180,18 @@ pub async fn relate_bookmark_tags(pool: &PgPool, bookmark_id: i64, tag_ids: &[i6
         .execute(pool)
         .await?;
 
-    let query_str = format!(
-        "INSERT INTO bookmarks_tags(bookmark_id, tag_id) VALUES {}",
-        (1..=tag_ids.len())
-            .map(|i| format!("($1, ${})", i + 1))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
-    let query = tag_ids.iter().fold(query(&query_str).bind(bookmark_id), |q, id| q.bind(id));
-    query.execute(pool).await?;
+    if !tag_ids.is_empty() {
+        let query_str = format!(
+            "INSERT INTO bookmarks_tags(bookmark_id, tag_id) VALUES {}",
+            (1..=tag_ids.len())
+                .map(|i| format!("($1, ${})", i + 1))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        let query = tag_ids.iter().fold(query(&query_str).bind(bookmark_id), |q, id| q.bind(id));
+        query.execute(pool).await?;
+    }
+
     Ok(())
 }
 
@@ -197,7 +202,7 @@ pub async fn fetch_tags_of_bookmarks(pool: &PgPool, bookmark_ids: &[i64]) -> Res
         SELECT bookmarks_tags.bookmark_id, tags.tag
         FROM bookmarks_tags
         JOIN tags ON bookmarks_tags.tag_id = tags.id
-        WHERE bookmarks_tags.id = ANY($1);
+        WHERE bookmarks_tags.bookmark_id = ANY($1);
         "#,
     )
     .bind(bookmark_ids)
