@@ -3,17 +3,11 @@
 use crate::{
     application::State,
     database::{
-        add_sync_tags, count_bookmarks_by_visibility, delete_bookmark, fetch_bookmark,
-        fetch_tags_of_bookmarks, insert_bookmark, relate_bookmark_tags, update_bookmark,
+        add_sync_tags, count_bookmarks_by_visibility, delete_bookmark, fetch_bookmark, fetch_tags_of_bookmarks, insert_bookmark, relate_bookmark_tags,
+        update_bookmark,
     },
-    entity::{
-        Bookmark as EntityBookmark, BookmarkUniqueQuery,
-        UnregisteredBookmark as EntityUnregisteredBookmark,
-    },
-    schema::{
-        Bookmark, BookmarkVisibility, BookmarksCountQuery, BookmarksCountResponse,
-        BookmarksRemoveQuery, BookmarksShowQuery,
-    },
+    entity::{Bookmark as EntityBookmark, BookmarkUniqueQuery, UnregisteredBookmark as EntityUnregisteredBookmark},
+    schema::{Bookmark, BookmarkVisibility, BookmarksCountQuery, BookmarksCountResponse, BookmarksRemoveQuery, BookmarksShowQuery},
 };
 
 use serde_json::{json, to_value as to_json_value};
@@ -36,25 +30,17 @@ pub async fn bookmarks_show(request: Request<State>) -> TideResult {
     } else if let Some(url) = query.url {
         BookmarkUniqueQuery::ByUrl { url }
     } else {
-        return Ok(Response::builder(StatusCode::BadRequest)
-            .body("Query must have one of id/hash/url")
-            .build());
+        return Ok(Response::builder(StatusCode::BadRequest).body("Query must have one of id/hash/url").build());
     };
 
     let bookmark_entity = match fetch_bookmark(&state.pool, entity_query).await? {
         Some(bm) => bm,
-        None => {
-            return Ok(Response::builder(StatusCode::NotFound)
-                .body("Bookmark not found")
-                .build())
-        }
+        None => return Ok(Response::builder(StatusCode::NotFound).body("Bookmark not found").build()),
     };
     let tags_entity = fetch_tags_of_bookmarks(&state.pool, &[bookmark_entity.id]).await?;
     let bookmark = bookmark_from_entity(bookmark_entity, tags_entity.into_iter().map(|(_, t)| t));
 
-    Ok(Response::builder(StatusCode::Ok)
-        .body(to_json_value(bookmark)?)
-        .build())
+    Ok(Response::builder(StatusCode::Ok).body(to_json_value(bookmark)?).build())
 }
 
 /// Endpoint of `POST /bookmarks/add`.
@@ -62,9 +48,7 @@ pub async fn bookmarks_add(mut request: Request<State>) -> TideResult {
     let body: Bookmark = request.body_json().await?;
     let state = request.state();
     if let Some(_) = body.id {
-        return Ok(Response::builder(StatusCode::NotFound)
-            .body("New bookmark must not have an ID")
-            .build());
+        return Ok(Response::builder(StatusCode::NotFound).body("New bookmark must not have an ID").build());
     }
 
     let bookmark_entity = EntityUnregisteredBookmark {
@@ -86,9 +70,7 @@ pub async fn bookmarks_add(mut request: Request<State>) -> TideResult {
     relate_bookmark_tags(&state.pool, new_bookmark.id, &tag_ids).await?;
 
     let bookmark = bookmark_from_entity(new_bookmark, tags);
-    Ok(Response::builder(StatusCode::Ok)
-        .body(to_json_value(bookmark)?)
-        .build())
+    Ok(Response::builder(StatusCode::Ok).body(to_json_value(bookmark)?).build())
 }
 
 /// Endpoint of `PUT /bookmarks/update`.
@@ -97,11 +79,7 @@ pub async fn bookmarks_update(mut request: Request<State>) -> TideResult {
     let state = request.state();
     let id = match body.id {
         Some(i) => i,
-        None => {
-            return Ok(Response::builder(StatusCode::BadRequest)
-                .body("New bookmark must not have an ID")
-                .build())
-        }
+        None => return Ok(Response::builder(StatusCode::BadRequest).body("New bookmark must not have an ID").build()),
     };
 
     let bookmark_entity = EntityUnregisteredBookmark {
@@ -123,9 +101,7 @@ pub async fn bookmarks_update(mut request: Request<State>) -> TideResult {
     relate_bookmark_tags(&state.pool, updated_bookmark.id, &tag_ids).await?;
 
     let bookmark = bookmark_from_entity(updated_bookmark, tags);
-    Ok(Response::builder(StatusCode::Ok)
-        .body(to_json_value(bookmark)?)
-        .build())
+    Ok(Response::builder(StatusCode::Ok).body(to_json_value(bookmark)?).build())
 }
 
 /// Endpoint of `DELETE /bookmarks/remove`.
@@ -149,10 +125,7 @@ pub async fn bookmarks_count(request: Request<State>) -> TideResult {
         .build())
 }
 
-fn bookmark_from_entity(
-    entity: EntityBookmark,
-    tags: impl IntoIterator<Item = String>,
-) -> Bookmark {
+fn bookmark_from_entity(entity: EntityBookmark, tags: impl IntoIterator<Item = String>) -> Bookmark {
     Bookmark {
         id: Some(entity.id),
         hash: entity.hash,

@@ -25,9 +25,7 @@ pub async fn fetch_bookmark(pool: &PgPool, query: BookmarkUniqueQuery) -> Result
             // TODO: Store the pribate_key and search with it
             query_as("SELECT * FROM bookmarks WHERE hash = $1;").bind(hash)
         }
-        BookmarkUniqueQuery::ByUrl { url } => {
-            query_as("SELECT * FROM bookmarks WHERE url = $1;").bind(url)
-        }
+        BookmarkUniqueQuery::ByUrl { url } => query_as("SELECT * FROM bookmarks WHERE url = $1;").bind(url),
     };
 
     let bookmark = query.fetch_optional(pool).await?;
@@ -39,9 +37,13 @@ pub async fn insert_bookmark(pool: &PgPool, bookmark: UnregisteredBookmark) -> R
     let now = Local::now();
     let registered = query_as(
         r#"
-        INSERT INTO bookmarks (hash, url, title, description, thumbnail, sticky, private, extra_data, created, updated)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING *;
+        INSERT INTO bookmarks (
+            hash, url, title, description, thumbnail,
+            sticky, private, extra_data, created, updated
+        ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10
+        ) RETURNING *;
         "#,
     )
     .bind(bookmark.hash)
@@ -54,7 +56,8 @@ pub async fn insert_bookmark(pool: &PgPool, bookmark: UnregisteredBookmark) -> R
     .bind(bookmark.extra_data)
     .bind(now)
     .bind(now)
-    .fetch_one(pool).await?;
+    .fetch_one(pool)
+    .await?;
 
     Ok(registered)
 }
@@ -62,11 +65,7 @@ pub async fn insert_bookmark(pool: &PgPool, bookmark: UnregisteredBookmark) -> R
 /// Updates a bookmark.
 /// It assumes that a bookmark with specified ID already exists.
 /// If not, nothing will happen.
-pub async fn update_bookmark(
-    pool: &PgPool,
-    id: i64,
-    bookmark: UnregisteredBookmark,
-) -> Result<Bookmark> {
+pub async fn update_bookmark(pool: &PgPool, id: i64, bookmark: UnregisteredBookmark) -> Result<Bookmark> {
     let now = Local::now();
     let registered = query_as(
         r#"
@@ -103,19 +102,13 @@ pub async fn update_bookmark(
 
 /// Deletes a bookmark by ID.
 pub async fn delete_bookmark(pool: &PgPool, id: i64) -> Result<()> {
-    query("DELETE FROM bookmarks WHERE id = $1;")
-        .bind(id)
-        .execute(pool)
-        .await?;
+    query("DELETE FROM bookmarks WHERE id = $1;").bind(id).execute(pool).await?;
 
     Ok(())
 }
 
 /// Counts bookmarks by visibility.
-pub async fn count_bookmarks_by_visibility(
-    pool: &PgPool,
-    visibility: BookmarkVisibility,
-) -> Result<i64> {
+pub async fn count_bookmarks_by_visibility(pool: &PgPool, visibility: BookmarkVisibility) -> Result<i64> {
     let clause = if visibility == BookmarkVisibility::All {
         "SELECT COUNT(*) FROM bookmarks;"
     } else {
@@ -131,18 +124,12 @@ pub async fn count_bookmarks_by_visibility(
 pub async fn add_sync_tags(pool: &PgPool, tags: &[String]) -> Result<Vec<Tag>> {
     let query_str = format!(
         "INSERT INTO tags(tag) VALUES {} ON CONFLICT DO NOTHING;",
-        (1..=tags.len())
-            .map(|i| format!("(${})", i))
-            .collect::<Vec<_>>()
-            .join(", ")
+        (1..=tags.len()).map(|i| format!("(${})", i)).collect::<Vec<_>>().join(", ")
     );
     let query = tags.iter().fold(query(&query_str), |q, t| q.bind(t));
     query.execute(pool).await?;
 
-    let synced_tags = query_as("SELECT * FROM tags WHERE tag = ANY($1);")
-        .bind(tags)
-        .fetch_all(pool)
-        .await?;
+    let synced_tags = query_as("SELECT * FROM tags WHERE tag = ANY($1);").bind(tags).fetch_all(pool).await?;
     Ok(synced_tags)
 }
 
@@ -155,23 +142,15 @@ pub async fn relate_bookmark_tags(pool: &PgPool, bookmark_id: i64, tag_ids: &[i6
 
     let query_str = format!(
         "INSERT INTO bookmarks_tags(bookmark_id, tag_id) VALUES {}",
-        (1..=tag_ids.len())
-            .map(|i| format!("($1, ${})", i + 1))
-            .collect::<Vec<_>>()
-            .join(", ")
+        (1..=tag_ids.len()).map(|i| format!("($1, ${})", i + 1)).collect::<Vec<_>>().join(", ")
     );
-    let query = tag_ids
-        .iter()
-        .fold(query(&query_str).bind(bookmark_id), |q, id| q.bind(id));
+    let query = tag_ids.iter().fold(query(&query_str).bind(bookmark_id), |q, id| q.bind(id));
     query.execute(pool).await?;
     Ok(())
 }
 
 /// Fetch tags of selected bookmarks.
-pub async fn fetch_tags_of_bookmarks(
-    pool: &PgPool,
-    bookmark_ids: &[i64],
-) -> Result<Vec<(i64, String)>> {
+pub async fn fetch_tags_of_bookmarks(pool: &PgPool, bookmark_ids: &[i64]) -> Result<Vec<(i64, String)>> {
     let tags = query_as(
         r#"
         SELECT bookmarks_tags.bookmark_id, tags.tag

@@ -18,8 +18,7 @@ async fn main() -> Result<()> {
     app.at("/bookmarks/show").get(endpoint::bookmarks_show);
     app.at("/bookmarks/add").post(endpoint::bookmarks_add);
     app.at("/bookmarks/update").put(endpoint::bookmarks_update);
-    app.at("/bookmarks/remove")
-        .delete(endpoint::bookmarks_remove);
+    app.at("/bookmarks/remove").delete(endpoint::bookmarks_remove);
     app.at("/bookmarks/find");
     app.at("/bookmarks/count").get(endpoint::bookmarks_count);
 
